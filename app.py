@@ -1,50 +1,55 @@
 from flask import Flask, request, jsonify
-from datetime import datetime
+from utils import format_timestamp
 import hashlib
 
 app = Flask(__name__)
 
-# Store seen commits to avoid duplicates
-seen = set()
-
-def format_time(ts):
-    return datetime.strptime(ts, "%Y-%m-%dT%H:%M:%SZ").strftime("%d-%b-%Y %H:%M:%S")
+# To keep track of seen commits and avoid duplicates
+seen_commit_ids = set()
 
 @app.route('/webhook', methods=['POST'])
 def webhook():
-    data = request.json
+    payload = request.get_json()
 
-    if 'commits' not in data:
-        return jsonify({'message': 'No commits in payload'}), 400
+    if not payload or 'commits' not in payload:
+        return jsonify({'error': 'Invalid webhook payload'}), 400
 
-    repo_name = data['repository']['full_name']
-    pusher = data['pusher']['name']
-    commits = data['commits']
+    repo = payload.get('repository', {}).get('full_name', 'unknown-repo')
+    pusher = payload.get('pusher', {}).get('name', 'unknown-user')
+    commits = payload['commits']
 
-    output = []
+    received_commits = []
 
     for commit in commits:
-        commit_id = commit['id']
-        commit_key = hashlib.sha256(commit_id.encode()).hexdigest()
+        commit_id = commit.get('id')
+        if not commit_id:
+            continue
 
-        if commit_key in seen:
-            continue  # skip duplicates
-        seen.add(commit_key)
+        # Deduplicate using a hash of commit ID
+        commit_hash = hashlib.sha256(commit_id.encode()).hexdigest()
+        if commit_hash in seen_commit_ids:
+            continue
 
-        message = commit['message']
-        url = commit['url']
-        timestamp = format_time(commit['timestamp'])
+        seen_commit_ids.add(commit_hash)
 
-        output.append({
-            "repo": repo_name,
+        commit_data = {
+            "repo": repo,
             "author": pusher,
-            "message": message,
-            "url": url,
-            "time": timestamp
-        })
+            "message": commit.get('message', ''),
+            "url": commit.get('url', ''),
+            "time": format_timestamp(commit.get('timestamp', ''))
+        }
+        received_commits.append(commit_data)
 
-    print("Received Commits:", output)
-    return jsonify({"status": "ok", "received": output}), 200
+    if not received_commits:
+        return jsonify({"message": "No new commits to process"}), 200
+
+    # Print to console (you could log to file/db instead)
+    print("📥 New Commits Received:")
+    for item in received_commits:
+        print(item)
+
+    return jsonify({"status": "success", "data": received_commits}), 200
 
 if __name__ == '__main__':
     app.run(port=5000, debug=True)
