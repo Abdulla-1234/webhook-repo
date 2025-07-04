@@ -7,6 +7,10 @@ app = Flask(__name__)
 # To keep track of seen commits and avoid duplicates
 seen_commit_ids = set()
 
+@app.route('/')
+def home():
+    return "<h2>✅ Webhook Server is Running!</h2><p>Send POST requests to <code>/webhook</code></p>"
+
 @app.route('/webhook', methods=['POST'])
 def webhook():
     payload = request.get_json()
@@ -44,7 +48,7 @@ def webhook():
     if not received_commits:
         return jsonify({"message": "No new commits to process"}), 200
 
-    # Print to console (you could log to file/db instead)
+    # Print to console (or log/store if needed)
     print("📥 New Commits Received:")
     for item in received_commits:
         print(item)
