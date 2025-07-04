@@ -1,10 +1,10 @@
-# GitHub Webhook Receiver 🔔
+# GitHub Webhook Receiver
 
 A Flask-based server that listens for GitHub push webhook events and extracts commit details.
 
 ---
 
-## ✅ Features
+## Features
 
 - Accepts POST webhook requests at `/webhook`
 - Displays repo name, author, message, timestamp, and commit URL
@@ -13,7 +13,7 @@ A Flask-based server that listens for GitHub push webhook events and extracts co
 
 ---
 
-## 🚀 Run Locally
+## Run Locally
 
 ### Prerequisites:
 - Python 3.7+
